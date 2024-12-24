@@ -44,7 +44,7 @@ function captureIntrinsicDimensions( element ) {
 export async function initialize() {
 	/** @type NodeListOf<HTMLImageElement> */
 	const imgElements = document.querySelectorAll(
-		`img[ ${ dataXPathAttribute } ]:is( :not([width]), :not([height]) )`
+		`img[ ${ dataXPathAttribute } ].od-missing-dimensions`
 	);
 	for ( /** @type {HTMLImageElement} */ const element of imgElements ) {
 		if ( element.complete ) {
@@ -63,7 +63,7 @@ export async function initialize() {
 
 	/** @type NodeListOf<HTMLVideoElement> */
 	const videoElements = document.querySelectorAll(
-		`video[ ${ dataXPathAttribute } ]:is( :not([width]), :not([height]) )`
+		`video[ ${ dataXPathAttribute } ].od-missing-dimensions`
 	);
 	for ( /** @type {HTMLVideoElement} */ const element of videoElements ) {
 		if ( element.readyState >= HTMLMediaElement.HAVE_METADATA ) {

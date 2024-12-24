@@ -51,6 +51,8 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 		return false;
 	}
 
+	$processor->add_class( 'od-missing-dimensions' );
+
 	$xpath              = $processor->get_xpath();
 	$xpath_elements_map = $context->url_metric_group_collection->get_xpath_elements_map();
 
