@@ -87,8 +87,17 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 			$processor->set_attribute( 'width', $common_intrinsic_dimensions['width'] );
 			$processor->set_attribute( 'height', $common_intrinsic_dimensions['height'] );
 			if ( 'VIDEO' === $processor->get_tag() ) {
-				// TODO: Add as a STYLE rule instead.
-				$processor->set_attribute( 'style', 'height:auto' ); // TODO: The Video block has styles the VIDEO with width:100% but it lacks height:auto.
+				// TODO: It's not clear why the aspect-ratio needs to be specified when the user agent style is already defining `aspect-ratio: auto $width / $height;`.
+				// TODO: Also, the Video block has styles the VIDEO with width:100% but it lacks height:auto. Why?
+				// TODO: Why does the Image block use width:content-fit?
+				$style = sprintf( 'height: auto; width: 100%%; aspect-ratio: %d / %d;', $common_intrinsic_dimensions['width'], $common_intrinsic_dimensions['height'] );
+
+				$old_style = $processor->get_attribute( 'style' );
+				if ( is_string( $old_style ) ) {
+					$style .= $old_style;
+				}
+
+				$processor->set_attribute( 'style', $style );
 			}
 		}
 	}
