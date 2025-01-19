@@ -21,6 +21,19 @@ function odid_register_tag_visitor( OD_Tag_Visitor_Registry $registry ): void {
 	$registry->register( 'od-intrinsic-dimensions', 'odid_visit_tag' );
 }
 
+/**
+ * Checks whether the provided attribute value is a valid dimension.
+ *
+ * @param string|true|null $value Attribute value.
+ * @return bool Is valid.
+ */
+function odid_is_valid_dimension( $value ): bool {
+	return (
+		is_string( $value )
+		&&
+		1 === preg_match( '/^\d+%?$/', trim( $value ) ) // Note that is_numeric() cannot be used because is_numeric('100%') is false.
+	);
+}
 
 /**
  * Visits a tag.
@@ -32,21 +45,17 @@ function odid_register_tag_visitor( OD_Tag_Visitor_Registry $registry ): void {
  */
 function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 	$processor = $context->processor;
+
+	// Short-circuit if not visiting a relevant tag.
 	if ( ! in_array( $processor->get_tag(), array( 'IMG', 'VIDEO' ), true ) ) {
 		return false;
 	}
 
 	// No need to track this element in URL Metrics to supply intrinsic dimensions if the width and height are already supplied.
-	$width  = $processor->get_attribute( 'width' );
-	$height = $processor->get_attribute( 'height' );
 	if (
-		is_string( $width )
+		odid_is_valid_dimension( $processor->get_attribute( 'width' ) )
 		&&
-		is_numeric( $width )
-		&&
-		is_string( $height )
-		&&
-		is_numeric( $height )
+		odid_is_valid_dimension( $processor->get_attribute( 'height' ) )
 	) {
 		return false;
 	}
