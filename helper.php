@@ -60,55 +60,114 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 		return false;
 	}
 
-	$processor->add_class( 'od-missing-dimensions' );
+	/*
+	 * From here on out, only true will be returned because we want to track the element in URL Metrics even if the
+	 * collected URL Metrics may not yet mean the optimization can be applied (e.g. no intrinsicDimensions have been
+	 * collected yet or not all the intrinsicDimensions are equal).
+	 * TODO: There should really be something like $context->track_tag() which eliminates the need to juggle returning booleans.
+	 */
 
-	$xpath              = $processor->get_xpath();
-	$xpath_elements_map = $context->url_metric_group_collection->get_xpath_elements_map();
+	// Compute a hash of the sources for the IMG/VIDEO. This is a safeguard used to ensure that we only apply the
+	// previously-captured intrinsic dimensions if the source(s) for those dimensions match the current source(s).
+	$sources  = array();
+	$src_attr = $processor->get_attribute( 'src' );
+	if ( is_string( $src_attr ) ) {
+		$sources[] = $src_attr;
+	} elseif ( 'VIDEO' === $processor->get_tag() ) {
+		// If a src attribute is not present, we have to look at the SOURCE tags for what the sources are.
+		$bookmark = 'intrinsic_dimensions_video';
+		if ( ! $processor->set_bookmark( $bookmark ) ) {
+			// Unable to set a bookmark so we have to abort.
+			return true;
+		}
 
-	if ( isset( $xpath_elements_map[ $xpath ] ) ) {
-		$all_intrinsic_dimensions = array_map(
-			static function ( OD_Element $element ) {
+		while ( $processor->next_tag() ) {
+			if ( $processor->get_tag() === 'SOURCE' ) { // @phpstan-ignore identical.alwaysFalse
+				$src = $processor->get_attribute( 'src' );
+				if ( is_string( $src ) ) {
+					$sources[] = $src;
+				}
+			} elseif ( $processor->get_tag() === 'VIDEO' ) {
+				// Stop once we got to the closing tag.
+				break;
+			}
+		}
+
+		if ( ! $processor->seek( $bookmark ) ) {
+			// If unable to seek back to the VIDEO, we have to abort optimization.
+			return true;
+		}
+	}
+	if ( 'IMG' === $processor->get_tag() ) {
+		$srcset = $processor->get_attribute( 'srcset' );
+		if ( is_string( $srcset ) ) {
+			$sources[] = $srcset;
+		}
+	}
+	$source_hash = md5( (string) wp_json_encode( $sources ) );
+	$processor->set_meta_attribute( 'intrinsic-dimensions-src-hash', $source_hash );
+
+	// Get this element from all URL Metrics.
+	$xpath    = $processor->get_xpath();
+	$elements = $context->url_metric_group_collection->get_xpath_elements_map()[ $xpath ] ?? array();
+
+	$all_intrinsic_dimensions = array_filter( // Remove any null values.
+		array_map(
+			/**
+			 * Gets the stored intrinsic dimensions from the element.
+			 *
+			 * The intrinsicDimensions value will be null if the element's URL Metric was collected before this
+			 * extension was activated.
+			 *
+			 * @return array{width: int, height: int, srcHash: non-empty-string}|null Intrinsic dimensions.
+			 */
+			static function ( OD_Element $element ): ?array {
 				return $element->get( 'intrinsicDimensions' );
 			},
-			array_filter(
-				$xpath_elements_map[ $xpath ],
-				static function ( OD_Element $element ) {
-					return is_array( $element->get( 'intrinsicDimensions' ) );
-				}
-			)
-		);
+			$elements
+		)
+	);
 
-		$common_intrinsic_dimensions = null;
-		$intrinsic_dimensions_count  = count( $all_intrinsic_dimensions );
-		if ( $intrinsic_dimensions_count > 0 ) {
-			// If we encountered one of the URL Metrics which captured an inconsistency in the captured intrinsic dimensions for this element, abort.
-			$common_intrinsic_dimensions = $all_intrinsic_dimensions[0];
-			for ( $i = 1; $i < $intrinsic_dimensions_count; $i++ ) {
-				if ( $all_intrinsic_dimensions[ $i ] !== $common_intrinsic_dimensions ) {
-					$common_intrinsic_dimensions = null;
-					break;
-				}
-			}
+	// No intrinsic dimensions have been collected yet.
+	if ( count( $all_intrinsic_dimensions ) === 0 ) {
+		return true;
+	}
+
+	// Make sure all dimensions are equal, since if there is any variation then this indicates the IMG may point to a URL
+	// that returns an image with varying dimensions, or the IMG/VIDEO is sorted randomly among siblings.
+
+	/**
+	 * Intrinsic dimensions.
+	 *
+	 * @var array{width: int, height: int, srcHash: non-empty-string} $intrinsic_dimensions
+	 */
+	$intrinsic_dimensions = array_shift( $all_intrinsic_dimensions );
+	foreach ( $all_intrinsic_dimensions as $next_intrinsic_dimensions ) {
+		if ( $intrinsic_dimensions !== $next_intrinsic_dimensions ) {
+			return true;
+		}
+	}
+
+	// Abort if the current hash of the sources does not match the hash of the sources for the captured intrinsic dimensions.
+	if ( $source_hash !== $intrinsic_dimensions['srcHash'] ) {
+		return true;
+	}
+
+	// Set the width and height to reflect the captured intrinsic dimensions.
+	$processor->set_attribute( 'width', (string) $intrinsic_dimensions['width'] );
+	$processor->set_attribute( 'height', (string) $intrinsic_dimensions['height'] );
+	if ( 'VIDEO' === $processor->get_tag() ) {
+		// TODO: It's not clear why the aspect-ratio needs to be specified when the user agent style is already defining `aspect-ratio: auto $width / $height;`.
+		// TODO: Also, the Video block has styles the VIDEO with width:100% but it lacks height:auto. Why?
+		// TODO: Why does the Image block use width:content-fit?
+		$style = sprintf( 'height: auto; width: 100%%; aspect-ratio: %d / %d;', $intrinsic_dimensions['width'], $intrinsic_dimensions['height'] );
+
+		$old_style = $processor->get_attribute( 'style' );
+		if ( is_string( $old_style ) ) {
+			$style .= $old_style;
 		}
 
-		// Set the width and height to reflect the captured intrinsic dimensions.
-		if ( isset( $common_intrinsic_dimensions['width'], $common_intrinsic_dimensions['height'] ) ) {
-			$processor->set_attribute( 'width', $common_intrinsic_dimensions['width'] );
-			$processor->set_attribute( 'height', $common_intrinsic_dimensions['height'] );
-			if ( 'VIDEO' === $processor->get_tag() ) {
-				// TODO: It's not clear why the aspect-ratio needs to be specified when the user agent style is already defining `aspect-ratio: auto $width / $height;`.
-				// TODO: Also, the Video block has styles the VIDEO with width:100% but it lacks height:auto. Why?
-				// TODO: Why does the Image block use width:content-fit?
-				$style = sprintf( 'height: auto; width: 100%%; aspect-ratio: %d / %d;', $common_intrinsic_dimensions['width'], $common_intrinsic_dimensions['height'] );
-
-				$old_style = $processor->get_attribute( 'style' );
-				if ( is_string( $old_style ) ) {
-					$style .= $old_style;
-				}
-
-				$processor->set_attribute( 'style', $style );
-			}
-		}
+		$processor->set_attribute( 'style', $style );
 	}
 
 	return true;
@@ -149,12 +208,19 @@ function odid_add_element_item_schema_properties( $additional_properties ): arra
 		'type'       => 'object',
 		'properties' => array(
 			'width'  => array(
-				'type'    => 'integer',
-				'minimum' => 0,
+				'type'     => 'integer',
+				'minimum'  => 0,
+				'required' => true,
 			),
 			'height' => array(
-				'type'    => 'integer',
-				'minimum' => 0,
+				'type'     => 'integer',
+				'minimum'  => 0,
+				'required' => true,
+			),
+			'srcHash'    => array(
+				'type'     => 'string',
+				'pattern'  => '^[0-9a-f]{32}\z',
+				'required' => true,
 			),
 		),
 	);

@@ -7,10 +7,12 @@
 
 const dataXPathAttribute = 'data-od-xpath';
 
+const dataSrcHashAttribute = 'data-od-intrinsic-dimensions-src-hash';
+
 /**
  * Map of element XPath to its intrinsic dimensions.
  *
- * @type {Map<string, {width: number, height: number}>}
+ * @type {Map<string, {width: number, height: number, srcHash: string}>}
  */
 const intrinsicDimensionsByXPath = new Map();
 
@@ -25,11 +27,13 @@ function captureIntrinsicDimensions( element ) {
 		intrinsicDimensionsByXPath.set( xpath, {
 			width: element.naturalWidth,
 			height: element.naturalHeight,
+			srcHash: element.getAttribute( dataSrcHashAttribute ),
 		} );
 	} else if ( element instanceof HTMLVideoElement ) {
 		intrinsicDimensionsByXPath.set( xpath, {
 			width: element.videoWidth,
 			height: element.videoHeight,
+			srcHash: element.getAttribute( dataSrcHashAttribute ),
 		} );
 	}
 }
@@ -44,7 +48,7 @@ function captureIntrinsicDimensions( element ) {
 export async function initialize() {
 	/** @type NodeListOf<HTMLImageElement> */
 	const imgElements = document.querySelectorAll(
-		`img[ ${ dataXPathAttribute } ].od-missing-dimensions`
+		`img[ ${ dataXPathAttribute } ][ ${ dataSrcHashAttribute } ]`
 	);
 	for ( /** @type {HTMLImageElement} */ const element of imgElements ) {
 		if ( element.complete ) {
@@ -63,7 +67,7 @@ export async function initialize() {
 
 	/** @type NodeListOf<HTMLVideoElement> */
 	const videoElements = document.querySelectorAll(
-		`video[ ${ dataXPathAttribute } ].od-missing-dimensions`
+		`video[ ${ dataXPathAttribute } ][ ${ dataSrcHashAttribute } ]`
 	);
 	for ( /** @type {HTMLVideoElement} */ const element of videoElements ) {
 		if ( element.readyState >= HTMLMediaElement.HAVE_METADATA ) {
