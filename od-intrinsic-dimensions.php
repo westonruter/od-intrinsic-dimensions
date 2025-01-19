@@ -6,7 +6,7 @@
  * Requires at least: 6.5
  * Requires PHP: 7.2
  * Requires Plugins: optimization-detective
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: Weston Ruter
  * Author URI: https://weston.ruter.net/
  * License: GPLv2 or later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
-const OD_INTRINSIC_DIMENSIONS_VERSION = '0.1.0';
+const OD_INTRINSIC_DIMENSIONS_VERSION = '0.2.0';
 
 add_action(
 	'od_init',
