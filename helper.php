@@ -209,17 +209,17 @@ function odid_add_element_item_schema_properties( $additional_properties ): arra
 	$additional_properties['intrinsicDimensions'] = array(
 		'type'       => 'object',
 		'properties' => array(
-			'width'  => array(
+			'width'   => array(
 				'type'     => 'integer',
 				'minimum'  => 0,
 				'required' => true,
 			),
-			'height' => array(
+			'height'  => array(
 				'type'     => 'integer',
 				'minimum'  => 0,
 				'required' => true,
 			),
-			'srcHash'    => array(
+			'srcHash' => array(
 				'type'     => 'string',
 				'pattern'  => '^[0-9a-f]{32}\z',
 				'required' => true,
