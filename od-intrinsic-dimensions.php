@@ -18,9 +18,11 @@
  * @package od-intrinsic-dimensions
  */
 
+// @codeCoverageIgnoreStart
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
+// @codeCoverageIgnoreEnd
 
 const OD_INTRINSIC_DIMENSIONS_VERSION = '0.2.0';
 
