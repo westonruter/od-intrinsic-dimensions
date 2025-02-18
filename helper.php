@@ -43,14 +43,13 @@ function odid_is_valid_dimension( $value ): bool {
  * @since 0.1.0
  *
  * @param OD_Tag_Visitor_Context $context Tag visitor context.
- * @return bool Whether the tag should be tracked in URL Metrics.
  */
-function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
+function odid_visit_tag( OD_Tag_Visitor_Context $context ): void {
 	$processor = $context->processor;
 
 	// Short-circuit if not visiting a relevant tag.
 	if ( ! in_array( $processor->get_tag(), array( 'IMG', 'VIDEO' ), true ) ) {
-		return false;
+		return;
 	}
 
 	// No need to track this element in URL Metrics to supply intrinsic dimensions if the width and height are already supplied.
@@ -59,15 +58,15 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 		&&
 		odid_is_valid_dimension( $processor->get_attribute( 'height' ) )
 	) {
-		return false;
+		return;
 	}
 
 	/*
-	 * From here on out, only true will be returned because we want to track the element in URL Metrics even if the
-	 * collected URL Metrics may not yet mean the optimization can be applied (e.g. no intrinsicDimensions have been
-	 * collected yet or not all the intrinsicDimensions are equal).
-	 * TODO: There should really be something like $context->track_tag() which eliminates the need to juggle returning booleans.
+	 * From here on out, we know that we want to track the element in URL Metrics even if the collected URL Metrics may
+	 * not yet mean the optimization can be applied (e.g. no intrinsicDimensions have been collected yet or not all the
+	 * intrinsicDimensions are equal).
 	 */
+	$context->track_tag();
 
 	// Compute a hash of the sources for the IMG/VIDEO. This is a safeguard used to ensure that we only apply the
 	// previously-captured intrinsic dimensions if the source(s) for those dimensions match the current source(s).
@@ -80,7 +79,7 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 		$bookmark = 'intrinsic_dimensions_video';
 		if ( ! $processor->set_bookmark( $bookmark ) ) {
 			// Unable to set a bookmark so we have to abort.
-			return true;
+			return;
 		}
 
 		while ( $processor->next_tag() ) {
@@ -97,7 +96,7 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 
 		if ( ! $processor->seek( $bookmark ) ) {
 			// If unable to seek back to the VIDEO, we have to abort optimization.
-			return true;
+			return;
 		}
 	}
 	if ( 'IMG' === $processor->get_tag() ) {
@@ -132,7 +131,7 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 
 	// No intrinsic dimensions have been collected yet.
 	if ( count( $all_intrinsic_dimensions ) === 0 ) {
-		return true;
+		return;
 	}
 
 	// Make sure all dimensions are equal, since if there is any variation then this indicates the IMG may point to a URL
@@ -146,13 +145,13 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 	$intrinsic_dimensions = array_shift( $all_intrinsic_dimensions );
 	foreach ( $all_intrinsic_dimensions as $next_intrinsic_dimensions ) {
 		if ( $intrinsic_dimensions !== $next_intrinsic_dimensions ) {
-			return true;
+			return;
 		}
 	}
 
 	// Abort if the current hash of the sources does not match the hash of the sources for the captured intrinsic dimensions.
 	if ( $source_hash !== $intrinsic_dimensions['srcHash'] ) {
-		return true;
+		return;
 	}
 
 	// Set the width and height to reflect the captured intrinsic dimensions.
@@ -171,8 +170,6 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): bool {
 
 		$processor->set_attribute( 'style', $style );
 	}
-
-	return true;
 }
 
 /**
