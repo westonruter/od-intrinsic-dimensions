@@ -82,7 +82,7 @@ function odid_visit_tag( OD_Tag_Visitor_Context $context ): void {
 			return;
 		}
 
-		while ( $processor->next_tag() ) {
+		while ( $processor->next_tag( array( 'tag_closers' => 'visit' ) ) ) {
 			if ( $processor->get_tag() === 'SOURCE' ) { // @phpstan-ignore identical.alwaysFalse
 				$src = $processor->get_attribute( 'src' );
 				if ( is_string( $src ) ) {
