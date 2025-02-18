@@ -28,7 +28,13 @@ const OD_INTRINSIC_DIMENSIONS_VERSION = '0.2.0';
 
 add_action(
 	'od_init',
-	static function (): void {
+	static function ( string $od_version ): void {
+		if (
+			version_compare( (string) strtok( $od_version, '-' ), '1.0.0', '<' )
+		) {
+			return;
+		}
+
 		require_once __DIR__ . '/helper.php';
 
 		add_action( 'od_register_tag_visitors', 'odid_register_tag_visitor' );
