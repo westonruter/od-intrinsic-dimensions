@@ -31,10 +31,6 @@ add_action(
 	static function ( string $od_version ): void {
 		if (
 			version_compare( (string) strtok( $od_version, '-' ), '1.0.0', '<' )
-			||
-			'1.0.0-beta1' === $od_version
-			||
-			'1.0.0-beta2' === $od_version
 		) {
 			return;
 		}
