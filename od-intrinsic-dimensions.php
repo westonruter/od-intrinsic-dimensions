@@ -6,7 +6,7 @@
  * Requires at least: 6.5
  * Requires PHP: 7.2
  * Requires Plugins: optimization-detective
- * Version: 0.2.0
+ * Version: 0.3.0
  * Author: Weston Ruter
  * Author URI: https://weston.ruter.net/
  * License: GPLv2 or later
@@ -28,10 +28,28 @@ const OD_INTRINSIC_DIMENSIONS_VERSION = '0.2.0';
 
 add_action(
 	'od_init',
-	static function ( string $od_version ): void {
-		if (
-			version_compare( (string) strtok( $od_version, '-' ), '1.0.0', '<' )
-		) {
+	static function ( string $optimization_detective_version ): void {
+		$required_od_version = '1.0.0-beta4';
+		if ( ! version_compare( $optimization_detective_version, $required_od_version, '>=' ) ) {
+			add_action(
+				'admin_notices',
+				static function (): void {
+					global $pagenow;
+					if ( ! in_array( $pagenow, array( 'index.php', 'plugins.php' ), true ) ) {
+						return;
+					}
+					wp_admin_notice(
+						esc_html(
+							sprintf(
+								/* translators: %s is plugin name */
+								__( 'The %s plugin requires a newer version of the Optimization Detective plugin. Please update your plugins.', 'optimization-detective-intrinsic-dimensions' ), // phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
+								plugin_basename( __FILE__ )
+							)
+						),
+						array( 'type' => 'warning' )
+					);
+				}
+			);
 			return;
 		}
 
