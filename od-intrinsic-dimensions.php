@@ -42,7 +42,7 @@ add_action(
 						esc_html(
 							sprintf(
 								/* translators: %s is plugin name */
-								__( 'The %s plugin requires a newer version of the Optimization Detective plugin. Please update your plugins.', 'optimization-detective-intrinsic-dimensions' ), // phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
+								__( 'The %s plugin requires a newer version of the Optimization Detective plugin. Please update your plugins.', 'od-intrinsic-dimensions' ), // phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
 								plugin_basename( __FILE__ )
 							)
 						),
