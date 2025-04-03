@@ -16,18 +16,22 @@ const dataSrcHashAttribute = 'data-od-intrinsic-dimensions-src-hash';
  */
 function captureIntrinsicDimensions( element, extendElementData ) {
 	const xpath = element.getAttribute( dataXPathAttribute );
+	let intrinsicDimensions;
 	if ( element instanceof HTMLImageElement ) {
-		extendElementData( xpath, {
+		intrinsicDimensions = {
 			width: element.naturalWidth,
 			height: element.naturalHeight,
 			srcHash: element.getAttribute( dataSrcHashAttribute ),
-		} );
+		};
 	} else if ( element instanceof HTMLVideoElement ) {
-		extendElementData( xpath, {
+		intrinsicDimensions = {
 			width: element.videoWidth,
 			height: element.videoHeight,
 			srcHash: element.getAttribute( dataSrcHashAttribute ),
-		} );
+		};
+	}
+	if ( intrinsicDimensions ) {
+		extendElementData( xpath, { intrinsicDimensions } );
 	}
 }
 
